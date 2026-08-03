@@ -1,14 +1,37 @@
+# Python virtual environment
+venv/
+.venv/
+**/venv/
+
+# Python cache
 __pycache__/
+**/__pycache__/
 *.pyc
+
+# Environment variables
 .env
+
+# Database files
 *.db
+*.sqlite3
+
+# MLflow
+mlruns/
+**/mlruns/
+
+# Generated data
 uploads/*
 !uploads/.gitkeep
+
 cleaned_data/*
 !cleaned_data/.gitkeep
+
 reports/*
 !reports/.gitkeep
-mlruns/*
-!mlruns/.gitkeep
-.venv/
-venv/
+
+# IDE
+.vscode/
+
+# React (future frontend)
+node_modules/
+dist/
