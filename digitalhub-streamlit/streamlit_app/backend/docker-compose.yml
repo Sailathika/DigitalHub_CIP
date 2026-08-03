@@ -1,0 +1,42 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: shopsense
+      POSTGRES_PASSWORD: shopsense
+      POSTGRES_DB: shopsense
+    ports:
+      - "5432:5432"
+    volumes:
+      - shopsense_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shopsense"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      POSTGRES_USER: shopsense
+      POSTGRES_PASSWORD: shopsense
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: shopsense
+      CORS_ORIGINS: "http://localhost:5173"
+      JWT_SECRET_KEY: change-this-secret-in-production
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./uploads:/app/uploads
+      - ./cleaned_data:/app/cleaned_data
+      - ./reports:/app/reports
+      - ./mlruns:/app/mlruns
+
+volumes:
+  shopsense_postgres_data:
