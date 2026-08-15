@@ -1,5 +1,4 @@
 from fastapi import APIRouter
-
 from app.api.v1 import (
     auth,
     churn,
@@ -19,6 +18,7 @@ from app.api.v1 import (
     vendor_profile,
     vendor_reports,
     vendor_sales,
+    vendor_orders,       # ← ADD THIS
     vendors,
 )
 
@@ -29,6 +29,7 @@ api_router.include_router(vendors.router)
 api_router.include_router(vendor_products.router)
 api_router.include_router(vendor_profile.router)
 api_router.include_router(vendor_dashboard.router)
+api_router.include_router(vendor_orders.router)
 api_router.include_router(vendor_sales.router)
 api_router.include_router(vendor_reports.router)
 api_router.include_router(datasets.router)

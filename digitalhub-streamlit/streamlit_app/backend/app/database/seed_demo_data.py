@@ -18,7 +18,7 @@ from app.auth.security import hash_password
 from app.database.session import SessionLocal
 from app.models.customer import Customer
 from app.models.dataset import Dataset, DatasetStatus
-from app.models.order import Order
+from app.models.order import Order, OrderStatus
 from app.models.product import Product
 from app.models.user import User, UserRole, VendorStatus
 from app.models.vendor_product import VendorProduct, VendorProductStatus
@@ -74,7 +74,13 @@ PRODUCTS = [
     ("PowerCell 20000mAh Power Bank", "Accessories", 1999, 150, "PowerCell"),
     ("GripStand Adjustable Laptop Stand", "Accessories", 1499, 6, "GripStand"),
 ]
-
+ORDER_STATUSES = [
+    "Pending",
+    "Processing",
+    "Shipped",
+    "Delivered",
+    "Cancelled",
+]
 CUSTOMER_FIRST_NAMES = [
     "Riya", "Vikram", "Ishaan", "Meera", "Aditya", "Sanya", "Karan", "Neha", "Devika", "Farhan",
     "Priya", "Arjun", "Kavya", "Rahul", "Ananya", "Siddharth", "Pooja", "Rohit", "Divya", "Manish",
@@ -212,6 +218,13 @@ def seed_demo_marketplace() -> None:
                 order_date=order_date,
                 quantity=quantity,
                 amount=amount,
+                status=rand.choice([
+                    OrderStatus.PENDING,
+                    OrderStatus.CONFIRMED,
+                    OrderStatus.SHIPPED,
+                    OrderStatus.DELIVERED,
+                    OrderStatus.CANCELLED,
+            ]),
             )
             db.add(order)
             orders.append(order)

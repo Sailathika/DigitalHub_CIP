@@ -1,174 +1,237 @@
 import pandas as pd
 import streamlit as st
 
+from core.api_client import ApiError, get
 from core.theme import badge_html
 from core.utils import format_currency, format_number
 
+
+# ---------------------------------------------------------
+# Page Header
+# ---------------------------------------------------------
 
 st.title("Orders")
 st.caption("View and track orders placed for your products.")
 
 
 # ---------------------------------------------------------
-# Demo Order Data
+# Load Orders
 # ---------------------------------------------------------
 
-orders = [
-    {"order_ref":"ORD1001","customer":"Rahul Sharma","product":"Samsung Galaxy S25","category":"Smartphones","quantity":1,"amount":79999,"status":"Delivered","date":"2026-08-02"},
-    {"order_ref":"ORD1002","customer":"Priya Nair","product":"Sony WH-1000XM6","category":"Audio","quantity":2,"amount":59998,"status":"Shipped","date":"2026-08-02"},
-    {"order_ref":"ORD1003","customer":"Arjun Kumar","product":"Logitech MX Master 3S","category":"Accessories","quantity":1,"amount":8995,"status":"Processing","date":"2026-08-01"},
-    {"order_ref":"ORD1004","customer":"Sneha Patel","product":"Apple Watch Series 10","category":"Wearables","quantity":1,"amount":49900,"status":"Pending","date":"2026-07-31"},
-    {"order_ref":"ORD1005","customer":"Vikram Singh","product":"Dell XPS 15","category":"Laptops","quantity":1,"amount":168990,"status":"Delivered","date":"2026-07-30"},
-    {"order_ref":"ORD1006","customer":"Ananya Roy","product":"iPhone 17 Pro","category":"Smartphones","quantity":1,"amount":134900,"status":"Delivered","date":"2026-07-30"},
-    {"order_ref":"ORD1007","customer":"Karan Mehta","product":"JBL Flip 7","category":"Audio","quantity":2,"amount":25998,"status":"Cancelled","date":"2026-07-29"},
-    {"order_ref":"ORD1008","customer":"Neha Verma","product":"Canon EOS R10","category":"Cameras","quantity":1,"amount":87999,"status":"Shipped","date":"2026-07-28"},
-    {"order_ref":"ORD1009","customer":"Amit Joshi","product":"Samsung Smart Monitor","category":"Monitors","quantity":1,"amount":24999,"status":"Delivered","date":"2026-07-28"},
-    {"order_ref":"ORD1010","customer":"Pooja Das","product":"Boat Airdopes 311","category":"Audio","quantity":3,"amount":4497,"status":"Delivered","date":"2026-07-27"},
-    {"order_ref":"ORD1011","customer":"Rohan Gupta","product":"HP Victus Gaming Laptop","category":"Laptops","quantity":1,"amount":78999,"status":"Pending","date":"2026-07-27"},
-    {"order_ref":"ORD1012","customer":"Meera Iyer","product":"OnePlus Pad 3","category":"Tablets","quantity":1,"amount":42999,"status":"Delivered","date":"2026-07-26"},
-    {"order_ref":"ORD1013","customer":"Sanjay Rao","product":"AirPods Pro","category":"Audio","quantity":2,"amount":49998,"status":"Processing","date":"2026-07-25"},
-    {"order_ref":"ORD1014","customer":"Deepika Sen","product":"LG OLED 55 TV","category":"Television","quantity":1,"amount":129999,"status":"Delivered","date":"2026-07-25"},
-    {"order_ref":"ORD1015","customer":"Harish Kumar","product":"Acer Predator Helios","category":"Laptops","quantity":1,"amount":149999,"status":"Delivered","date":"2026-07-24"},
-    {"order_ref":"ORD1016","customer":"Ishita Jain","product":"Samsung Galaxy Buds 3","category":"Audio","quantity":1,"amount":9999,"status":"Shipped","date":"2026-07-24"},
-    {"order_ref":"ORD1017","customer":"Varun Nair","product":"ROG Phone 10","category":"Smartphones","quantity":1,"amount":89999,"status":"Pending","date":"2026-07-23"},
-    {"order_ref":"ORD1018","customer":"Divya Kapoor","product":"Fitbit Charge 7","category":"Wearables","quantity":2,"amount":31998,"status":"Delivered","date":"2026-07-23"},
-    {"order_ref":"ORD1019","customer":"Nikhil Shah","product":"Lenovo Legion 5","category":"Laptops","quantity":1,"amount":118999,"status":"Processing","date":"2026-07-22"},
-    {"order_ref":"ORD1020","customer":"Asha Reddy","product":"Kindle Paperwhite","category":"Tablets","quantity":1,"amount":14999,"status":"Delivered","date":"2026-07-21"},
-    {"order_ref":"ORD1021","customer":"Kishore Babu","product":"Galaxy Tab S10","category":"Tablets","quantity":1,"amount":68999,"status":"Delivered","date":"2026-07-20"},
-    {"order_ref":"ORD1022","customer":"Lavanya S","product":"Nothing Phone 4","category":"Smartphones","quantity":1,"amount":45999,"status":"Shipped","date":"2026-07-19"},
-    {"order_ref":"ORD1023","customer":"Akash Menon","product":"GoPro Hero 14","category":"Cameras","quantity":1,"amount":54999,"status":"Delivered","date":"2026-07-18"},
-    {"order_ref":"ORD1024","customer":"Sowmya K","product":"Xiaomi Smart Band 10","category":"Wearables","quantity":2,"amount":8998,"status":"Cancelled","date":"2026-07-18"},
-    {"order_ref":"ORD1025","customer":"Manoj Pillai","product":"BenQ 27 Monitor","category":"Monitors","quantity":1,"amount":38999,"status":"Delivered","date":"2026-07-17"},
-]
+@st.cache_data(ttl=30)
+def load_orders(search="", status_filter="All"):
+    params = {}
+
+    if search:
+        params["search"] = search
+
+    if status_filter and status_filter != "All":
+        params["status_filter"] = status_filter.lower()
+
+    return get("/vendor/orders/", params=params)
 
 
-df = pd.DataFrame(orders)
-df["date"] = pd.to_datetime(df["date"])
+try:
+    # We need search/status values before loading,
+    # so filters are created first.
+    f1, f2 = st.columns([3, 1])
+
+    search = f1.text_input(
+        "Search Orders",
+        placeholder="Customer, product or order ID...",
+    )
+
+    status_filter = f2.selectbox(
+        "Status",
+        [
+            "All",
+            "Pending",
+            "Processing",
+            "Shipped",
+            "Delivered",
+            "Cancelled",
+        ],
+    )
+
+    response = load_orders(search, status_filter)
+
+except ApiError as exc:
+    st.error(f"Unable to load orders: {exc.message}")
+    st.stop()
 
 
 # ---------------------------------------------------------
-# Filters
+# Convert API Response
 # ---------------------------------------------------------
 
-f1, f2, f3 = st.columns([2,1,1])
+orders = response.get("orders", [])
+total = response.get("total", 0)
 
-search = f1.text_input(
-    "Search Orders",
-    placeholder="Customer, product or order ID..."
+
+if not orders:
+    st.info("No orders match your search or selected filter.")
+    st.stop()
+
+
+# ---------------------------------------------------------
+# Data Preparation
+# ---------------------------------------------------------
+
+rows = []
+
+for order in orders:
+
+    customer = order.get("customer") or {}
+    product = order.get("product") or {}
+
+    rows.append(
+        {
+            "id": order.get("id"),
+            "order_ref": order.get("order_ref") or "N/A",
+            "customer": customer.get("name") or "Unknown Customer",
+            "email": customer.get("email") or "N/A",
+            "product": product.get("name") or "Unknown Product",
+            "category": product.get("category") or "N/A",
+            "product_ref": product.get("product_ref") or "N/A",
+            "quantity": order.get("quantity", 0),
+            "amount": order.get("amount", 0),
+            "status": order.get("status", "pending"),
+            "date": order.get("order_date"),
+        }
+    )
+
+
+df = pd.DataFrame(rows)
+
+df["date"] = pd.to_datetime(
+    df["date"],
+    errors="coerce",
 )
 
-status_filter = f2.selectbox(
-    "Status",
-    ["All","Pending","Processing","Shipped","Delivered","Cancelled"]
-)
 
-sort_by = f3.selectbox(
+# ---------------------------------------------------------
+# Sort
+# ---------------------------------------------------------
+
+sort_by = st.selectbox(
     "Sort By",
-    ["Newest","Oldest","Highest Amount","Lowest Amount"]
+    [
+        "Newest",
+        "Oldest",
+        "Highest Amount",
+        "Lowest Amount",
+    ],
 )
-
-
-filtered = df.copy()
-
-
-if search:
-    text = search.lower()
-
-    filtered = filtered[
-        filtered["customer"].str.lower().str.contains(text)
-        |
-        filtered["product"].str.lower().str.contains(text)
-        |
-        filtered["order_ref"].str.lower().str.contains(text)
-    ]
-
-
-if status_filter != "All":
-    filtered = filtered[
-        filtered["status"] == status_filter
-    ]
 
 
 if sort_by == "Newest":
-    filtered = filtered.sort_values(
+
+    df = df.sort_values(
         "date",
-        ascending=False
+        ascending=False,
     )
 
 elif sort_by == "Oldest":
-    filtered = filtered.sort_values("date")
+
+    df = df.sort_values(
+        "date",
+        ascending=True,
+    )
 
 elif sort_by == "Highest Amount":
-    filtered = filtered.sort_values(
+
+    df = df.sort_values(
         "amount",
-        ascending=False
+        ascending=False,
     )
 
 else:
-    filtered = filtered.sort_values("amount")
+
+    df = df.sort_values(
+        "amount",
+        ascending=True,
+    )
 
 
 # ---------------------------------------------------------
 # Metrics
 # ---------------------------------------------------------
 
-c1,c2,c3,c4 = st.columns(4)
+c1, c2, c3, c4 = st.columns(4)
 
 c1.metric(
     "Total Orders",
-    format_number(len(df))
+    format_number(total),
 )
 
 c2.metric(
     "Revenue",
-    format_currency(df["amount"].sum())
+    format_currency(df["amount"].sum()),
 )
 
 c3.metric(
     "Average Order",
-    format_currency(df["amount"].mean())
+    format_currency(df["amount"].mean()),
 )
 
-pending = len(
+pending_count = len(
     df[
-        df["status"].isin(
-            ["Pending","Processing"]
+        df["status"].str.lower().isin(
+            ["pending", "processing"]
         )
     ]
 )
 
 c4.metric(
     "Pending",
-    format_number(pending)
+    format_number(pending_count),
 )
+
 
 st.markdown("")
 
+
 # ---------------------------------------------------------
-# Orders Table / Cards
+# Status Styling
 # ---------------------------------------------------------
 
 STATUS_VARIANT = {
-    "Pending": "warning",
-    "Processing": "default",
-    "Shipped": "default",
-    "Delivered": "success",
-    "Cancelled": "danger",
+    "pending": "warning",
+    "processing": "default",
+    "shipped": "default",
+    "delivered": "success",
+    "cancelled": "danger",
 }
 
+
+def display_status(status_value):
+    status_text = str(status_value).replace(
+        "_",
+        " ",
+    ).title()
+
+    variant = STATUS_VARIANT.get(
+        str(status_value).lower(),
+        "default",
+    )
+
+    return badge_html(
+        status_text,
+        variant,
+    )
+
+
+# ---------------------------------------------------------
+# Order History
+# ---------------------------------------------------------
 
 st.markdown("### Order History")
 
 
-if filtered.empty:
-    st.info("No orders match your search or selected filter.")
-    st.stop()
-
-
-# Header row
+# Header
 
 headers = st.columns(
-    [1.5, 2, 3, 1, 1.5, 1.5]
+    [1.5, 2, 3, 0.8, 1.5, 1.5]
 )
 
 labels = [
@@ -177,126 +240,129 @@ labels = [
     "PRODUCT",
     "QTY",
     "AMOUNT",
-    "STATUS"
+    "STATUS",
 ]
 
 
 for col, label in zip(headers, labels):
+
     col.markdown(
         f"""
         <span class="dh-muted"
         style="font-weight:600;">
-        {label}
+            {label}
         </span>
         """,
-        unsafe_allow_html=True
+        unsafe_allow_html=True,
     )
 
 
 st.markdown(
     "<hr style='margin:0.5rem 0 1rem 0;'>",
-    unsafe_allow_html=True
+    unsafe_allow_html=True,
 )
-
 
 
 # ---------------------------------------------------------
 # Order Cards
 # ---------------------------------------------------------
 
-for _, row in filtered.iterrows():
+for _, row in df.iterrows():
 
     with st.container(border=True):
 
         c1, c2, c3, c4, c5, c6 = st.columns(
-            [1.5, 2, 3, 1, 1.5, 1.5]
+            [1.5, 2, 3, 0.8, 1.5, 1.5]
         )
 
-
+        # ---------------------------------------------
         # Order ID
+        # ---------------------------------------------
 
         c1.markdown(
             f"""
             <span style="
-            color:#3B82F6;
-            font-weight:700;
-            font-family:monospace;">
-            #{row["order_ref"]}
+                color:#3B82F6;
+                font-weight:700;
+                font-family:monospace;
+            ">
+                #{row["order_ref"]}
             </span>
             """,
-            unsafe_allow_html=True
+            unsafe_allow_html=True,
         )
 
-
+        # ---------------------------------------------
         # Customer
+        # ---------------------------------------------
 
         c2.markdown(
-            f"""
-            **{row["customer"]}**
-            """
+            f"**{row['customer']}**"
         )
 
-
+        # ---------------------------------------------
         # Product
+        # ---------------------------------------------
 
         c3.markdown(
             f"""
             **{row["product"]}**
 
             <span class="dh-muted">
-            {row["category"]}
+                {row["category"]}
             </span>
             """,
-            unsafe_allow_html=True
+            unsafe_allow_html=True,
         )
 
-
+        # ---------------------------------------------
         # Quantity
+        # ---------------------------------------------
 
         c4.markdown(
             str(row["quantity"])
         )
 
-
+        # ---------------------------------------------
         # Amount
+        # ---------------------------------------------
 
         c5.markdown(
             f"""
             <span style="
-            font-weight:700;
-            font-family:monospace;">
-            {format_currency(row["amount"])}
+                font-weight:700;
+                font-family:monospace;
+            ">
+                {format_currency(row["amount"])}
             </span>
             """,
-            unsafe_allow_html=True
+            unsafe_allow_html=True,
         )
 
-
+        # ---------------------------------------------
         # Status
+        # ---------------------------------------------
 
         c6.markdown(
-            badge_html(
-                row["status"],
-                STATUS_VARIANT.get(
-                    row["status"],
-                    "default"
-                )
-            ),
-            unsafe_allow_html=True
+            display_status(row["status"]),
+            unsafe_allow_html=True,
         )
 
 
+        # ---------------------------------------------
+        # Order Details
+        # ---------------------------------------------
 
-        # -------------------------------------------------
-        # Details
-        # -------------------------------------------------
+        with st.expander("View Order Details"):
 
-        with st.expander(
-            "View Order Details"
-        ):
+            # We already have all details from the list
+            # endpoint, so no extra API request is necessary.
 
             left, right = st.columns(2)
 
+            # -----------------------------------------
+            # Order Information
+            # -----------------------------------------
 
             with left:
 
@@ -309,31 +375,15 @@ for _, row in filtered.iterrows():
                 )
 
                 st.write(
-                    f"**Customer:** {row['customer']}"
+                    f"**Order Date:** "
+                    f"{row['date'].strftime('%d %b %Y, %I:%M %p')}"
+                    if pd.notna(row["date"])
+                    else "**Order Date:** N/A"
                 )
 
                 st.write(
-                    f"**Order Date:** {row['date'].strftime('%d %b %Y')}"
-                )
-
-                st.write(
-                    f"**Status:** {row['status']}"
-                )
-
-
-
-            with right:
-
-                st.markdown(
-                    "#### Product Information"
-                )
-
-                st.write(
-                    f"**Product:** {row['product']}"
-                )
-
-                st.write(
-                    f"**Category:** {row['category']}"
+                    f"**Status:** "
+                    f"{str(row['status']).title()}"
                 )
 
                 st.write(
@@ -341,51 +391,99 @@ for _, row in filtered.iterrows():
                 )
 
                 st.write(
-                    f"**Total Amount:** {format_currency(row['amount'])}"
+                    f"**Total Amount:** "
+                    f"{format_currency(row['amount'])}"
                 )
 
+            # -----------------------------------------
+            # Customer Information
+            # -----------------------------------------
 
+            with right:
+
+                st.markdown(
+                    "#### Customer Information"
+                )
+
+                st.write(
+                    f"**Customer:** {row['customer']}"
+                )
+
+                st.write(
+                    f"**Email:** {row['email']}"
+                )
 
             st.markdown("---")
 
+            # -----------------------------------------
+            # Product Information
+            # -----------------------------------------
 
-            # Order status message
+            st.markdown(
+                "#### Product Information"
+            )
 
-            if row["status"] == "Delivered":
+            p1, p2, p3 = st.columns(3)
+
+            p1.write(
+                f"**Product:** {row['product']}"
+            )
+
+            p2.write(
+                f"**Category:** {row['category']}"
+            )
+
+            p3.write(
+                f"**Product Ref:** {row['product_ref']}"
+            )
+
+            st.markdown("---")
+
+            # -----------------------------------------
+            # Status Message
+            # -----------------------------------------
+
+            current_status = str(
+                row["status"]
+            ).lower()
+
+            if current_status == "delivered":
 
                 st.success(
                     "✓ Order delivered successfully."
                 )
 
-            elif row["status"] == "Shipped":
+            elif current_status == "shipped":
 
                 st.info(
                     "🚚 Order has been shipped and is in transit."
                 )
 
-            elif row["status"] == "Processing":
+            elif current_status == "processing":
 
                 st.warning(
-                    "⏳ Order is being prepared."
+                    "⏳ Order is currently being prepared."
                 )
 
-            elif row["status"] == "Pending":
+            elif current_status == "pending":
 
                 st.warning(
                     "Waiting for order confirmation."
                 )
 
-            else:
+            elif current_status == "cancelled":
 
                 st.error(
                     "This order has been cancelled."
                 )
 
 
+# ---------------------------------------------------------
+# Footer
+# ---------------------------------------------------------
 
 st.markdown("")
 
-
 st.caption(
-    f"Showing {len(filtered)} of {len(df)} total orders"
+    f"Showing {len(df)} of {total} total orders"
 )

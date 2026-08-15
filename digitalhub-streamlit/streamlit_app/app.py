@@ -14,7 +14,35 @@ st.set_page_config(
 init_session_state()
 inject_global_css()
 
+def hide_auth_navigation():
+    st.markdown(
+        """
+        <style>
+        /* Hide sidebar completely on authentication page */
+        section[data-testid="stSidebar"] {
+            display: none !important;
+        }
 
+        /* Hide Streamlit navigation */
+        [data-testid="stSidebarNav"] {
+            display: none !important;
+        }
+
+        /* Remove sidebar spacing */
+        [data-testid="stAppViewContainer"] {
+            margin-left: 0 !important;
+        }
+
+        /* Full-width authentication page */
+        .main .block-container {
+            max-width: 100% !important;
+            padding-left: 2rem !important;
+            padding-right: 2rem !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
 # ── Auth page ──────────────────────────────────────────────────────────────────
 def render_login_form():
     col_left, col_right = st.columns([1, 1.2])
@@ -30,7 +58,7 @@ def render_login_form():
                         <span class="auth-brand-name">DigitalHub_CIP</span>
                     </div>
                     <div class="auth-headline">
-                        Commerce Intelligence Platform
+                        Customers Insights Platform
                     </div>
                     <div class="auth-subtext">
                         Enterprise analytics, vendor management,
@@ -38,7 +66,7 @@ def render_login_form():
                     </div>
                 </div>
                 <div class="auth-footer">
-                    Electronics marketplace &nbsp;&middot;&nbsp; Analytics Platform
+                    Electronics marketplace &nbsp;&middot;&nbsp; Customers Insights Platform
                 </div>
             </div>
             """,
@@ -79,7 +107,7 @@ def render_login_form():
                         except ApiError as exc:
                             st.error(exc.message)
 
-            st.caption("Demo — admin@digitalhub.io / ChangeMe123!")
+           
 
         with tab_register:
             with st.form("register_form", border=False):
@@ -172,6 +200,7 @@ def build_navigation():
 
 # ── Guard ──────────────────────────────────────────────────────────────────────
 if not is_authenticated():
+    hide_auth_navigation()
     render_login_form()
     st.stop()
 

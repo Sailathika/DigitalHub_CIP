@@ -208,59 +208,114 @@ def build_report(output_path: Path, dataset_name: str, sections: Dict) -> Path:
         story.append(Spacer(1, 12))
 
     # --- CLV ---
+    # --- CLV ---
     clv = sections.get("clv")
     if clv:
         story.append(PageBreak())
         story.append(Paragraph("Customer Lifetime Value Prediction", styles["SectionHeading"]))
+
+        r2_score = clv.get("r2_score")
+        r2_display = f"{r2_score:.3f}" if r2_score is not None else "N/A"
+
+    mae = clv.get("mae")
+    mae_display = f"₹{mae:,.0f}" if mae is not None else "N/A"
+
+    story.append(
+        Paragraph(
+            f"Model: {clv.get('model_version') or '—'} · "
+            f"R² = {r2_display} · "
+            f"MAE = {mae_display}",
+            styles["Body"],
+        )
+    )
+
+    top = clv.get("top_predictions", [])[:10]
+    if top:
+        story.append(Spacer(1, 8))
         story.append(
-            Paragraph(
-                f"Model: {clv.get('model_version', '—')} · R² = {clv.get('r2_score', 0):.3f} · "
-                f"MAE = ₹{clv.get('mae', 0):,.0f}",
-                styles["Body"],
+            _table_from_rows(
+                ["Customer", "Predicted CLV"],
+                [
+                    [
+                        p.get("name", "Unknown"),
+                        f"₹{(p.get('predicted_clv') or 0):,.0f}"
+                    ]
+                    for p in top
+                ],
             )
         )
-        top = clv.get("top_predictions", [])[:10]
-        if top:
-            story.append(Spacer(1, 8))
-            story.append(
-                _table_from_rows(
-                    ["Customer", "Predicted CLV"],
-                    [[p["name"], f"₹{p['predicted_clv']:,.0f}"] for p in top],
-                )
-            )
-        story.append(Spacer(1, 12))
+
+    story.append(Spacer(1, 12))
 
     # --- Churn ---
+    # --- Churn ---# --- Churn ---
     churn = sections.get("churn")
     if churn:
         story.append(Paragraph("Customer Churn Prediction", styles["SectionHeading"]))
+
+        accuracy = churn.get("accuracy")
+        accuracy_display = f"{accuracy:.1%}" if accuracy is not None else "N/A"
+
+        f1_score = churn.get("f1_score")
+        f1_display = f"{f1_score:.3f}" if f1_score is not None else "N/A"
+
         story.append(
             Paragraph(
-                f"Model: {churn.get('model_version', '—')} · Accuracy = {churn.get('accuracy', 0):.1%} · "
-                f"F1 = {churn.get('f1_score', 0):.3f}",
+                f"Model: {churn.get('model_version') or '—'} · "
+                f"Accuracy = {accuracy_display} · "
+                f"F1 = {f1_display}",
                 styles["Body"],
             )
         )
+
         importance = churn.get("feature_importance", {})
         if importance:
-            story.append(Spacer(1, 8))
-            story.append(_bar_chart(list(importance.values()), list(importance.keys()), "Feature Importance"))
-        high_risk = [p for p in churn.get("predictions", []) if p["risk_level"] == "High"][:10]
-        if high_risk:
-            story.append(Spacer(1, 8))
             story.append(
-                _table_from_rows(
-                    ["Customer", "Churn Probability", "Risk"],
-                    [[p["name"], f"{p['churn_probability']:.1%}", p["risk_level"]] for p in high_risk],
+                Spacer(1, 8)
+            )
+            story.append(
+                _bar_chart(
+                    list(importance.values()),
+                    list(importance.keys()),
+                    "Feature Importance"
                 )
             )
-        story.append(Spacer(1, 12))
 
+    high_risk = [
+        p
+        for p in churn.get("predictions", [])
+        if p.get("risk_level") == "High"
+    ][:10]
+
+    if high_risk:
+        story.append(Spacer(1, 8))
+        story.append(
+            _table_from_rows(
+                ["Customer", "Churn Probability", "Risk"],
+                [
+                    [
+                        p.get("name", "Unknown"),
+                        f"{(p.get('churn_probability') or 0):.1%}",
+                        p.get("risk_level", "Unknown"),
+                    ]
+                    for p in high_risk
+                ],
+            )
+        )
+
+    story.append(Spacer(1, 12))
     # --- Recommendations ---
     recs = sections.get("recommendations")
     if recs:
         story.append(Paragraph("Product Recommendations", styles["SectionHeading"]))
-        rows = [[r["name"], r["category"], f"{r['score']:.2f}"] for r in recs.get("top_recommended", [])[:10]]
+        rows = [
+        [
+        r.get("name", "Unknown"),
+        r.get("category", "Unknown"),
+        f"{(r.get('score') or 0):.2f}",
+        ]
+    for r in recs.get("top_recommended", [])[:10]
+        ]
         if rows:
             story.append(_table_from_rows(["Product", "Category", "Score"], rows))
         story.append(Spacer(1, 12))

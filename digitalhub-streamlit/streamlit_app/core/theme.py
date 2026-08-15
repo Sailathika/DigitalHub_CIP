@@ -45,12 +45,7 @@ def inject_global_css() -> None:
         }}
 
         /* ── Main content area ───────────────────────────────────────────── */
-        .block-container {{
-            padding-top: 2rem;
-            padding-bottom: 4rem;
-            max-width: 1340px;
-            background-color: {SURFACE};
-        }}
+    s
         [data-testid="stAppViewContainer"] {{
             background-color: {SURFACE_2};
         }}
@@ -127,10 +122,12 @@ def inject_global_css() -> None:
             box-shadow: none !important;
         }}
 
-        /* Order elements: Brand top (-100), Nav middle (0), User bottom (100) */
-        .dh-brand-wrapper,
-        section[data-testid="stSidebar"] div:has(> .dh-brand-wrapper) {{
-            order: -100 !important;
+       /* ── Sidebar Brand ───────────────────────── */
+        .dh-brand-wrapper {{
+            order: 0 !important;
+            margin-top: 0 !important;
+            margin-bottom: 20px !important;
+            flex-shrink: 0 !important;          
         }}
         section[data-testid="stSidebarNav"] {{
             order: 0 !important;
@@ -533,17 +530,16 @@ def inject_global_css() -> None:
             font-size: 0.875rem;
         }}
 
-        /* ── Main content containers (NOT sidebar) ───────────────────────── */
+            /* ── Main content containers ───────────────────────── */
         .block-container div[data-testid="stVerticalBlockBorderWrapper"] {{
-            border: 1px solid {BORDER} !important;
+            border: none !important;
             border-radius: 0.5rem !important;
             background: {SURFACE};
         }}
-
+        /* ── Dividers ────────────────────────────────────────────────────── */
         /* ── Dividers ────────────────────────────────────────────────────── */
         hr {{
-            border-color: {BORDER} !important;
-            margin: 1.25rem 0 !important;
+            display: none !important;
         }}
 
         /* ── Caption / helper text ───────────────────────────────────────── */
