@@ -1,0 +1,49 @@
+DigitalHub_CIP
+DigitalHub_CIP is an AI-powered Customer Insights Platform developed using Python and Streamlit. It helps businesses analyze customer data, gain valuable insights, predict customer churn, segment customers, and generate interactive reports for better decision-making.
+
+Features
+Secure Login System
+Interactive Dashboard
+Upload Customer Dataset
+Data Validation & Cleaning
+Exploratory Data Analysis (EDA)
+Customer Analytics
+Customer Segmentation (RFM Analysis)
+Customer Churn Prediction
+Product Recommendation
+Report Generation
+SQLite Database Integration
+Tech Stack
+Python
+Streamlit
+SQLite
+Pandas
+NumPy
+Scikit-learn
+Plotly
+Matplotlib
+Installation
+Clone the repository.
+
+Install the required dependencies:
+
+pip install -r requirements.txt
+Run the application:
+
+streamlit run app.py
+Project Workflow
+Login
+Upload Dataset
+Validate and Clean Data
+Store Data in SQLite
+Perform EDA
+Analyze Customer Insights
+Segment Customers
+Predict Customer Churn
+Generate Reports
+Future Enhancements
+FastAPI Backend Integration
+PostgreSQL Support
+MLflow Integration
+Docker Deployment
+Advanced Business Intelligence Dashboard
